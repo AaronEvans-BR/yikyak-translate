@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">YikYak Translate</string>
+    <string name="language_selection_prompt">Translate to:</string>
+    <string name="language_selection_placeholder">Loading languages...</string>
+    <string name="translate_button">Translate!</string>
+    <string name="source_language_code">en</string>
+</resources>
