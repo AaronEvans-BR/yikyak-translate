@@ -3,7 +3,8 @@ package com.yikyaktranslate.presentation.view
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,6 +13,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.yikyaktranslate.R
+import com.yikyaktranslate.model.Language
+import com.yikyaktranslate.presentation.viewmodel.UIState
 
 /**
  * Composable views that create primary translation screen
@@ -21,75 +24,122 @@ import com.yikyaktranslate.R
 fun TranslateView(
     inputText: TextFieldValue,
     onInputChange: (TextFieldValue) -> Unit,
-    languages: List<String>?,
+    displayLanguages: UIState<List<Language>>,
     targetLanguageIndex: Int,
     onTargetLanguageSelected: (Int) -> Unit,
-    onTranslateClick: () -> Unit, // TODO: implement
-    translatedText: String // TODO: implement
+    onTranslateClick: () -> Unit,
+    translatedText: UIState<String>
 ) {
+    val scrollState = rememberScrollState(0)
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = spacedBy(10.dp)
+            .padding(16.dp)
+            .fillMaxHeight(),
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
+        // User inputs text to translate here
+        TextField(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp),
+            value = inputText,
+            onValueChange = onInputChange,
+            placeholder = {
+                Text("Input text to translate")
+            }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        // User reads their translation here
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            modifier = Modifier
+                .weight(1f)
+                .height(IntrinsicSize.Max)
         ) {
-            // User inputs text to translate here
-            TextField(
-                modifier = Modifier.size(150.dp, 150.dp),
-                value = inputText,
-                onValueChange = onInputChange,
-                placeholder = {
-                    Text("Input text to translate")
+            when (translatedText) {
+                is UIState.Result -> Text(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .verticalScroll(scrollState)
+                        .border(width = 2.dp, color = MaterialTheme.colors.primary)
+                        .padding(5.dp),
+                    text = translatedText.data
+                )
+                is UIState.Idle -> {
+                    // Draw nothing!
                 }
-            )
+                is UIState.Loading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .width(48.dp)
+                                .height(48.dp),
+                        )
+                    }
+                }
+                else -> Text(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .verticalScroll(scrollState)
+                        .border(width = 2.dp, color = MaterialTheme.colors.primary)
+                        .padding(5.dp),
+                    text = "Error"
 
-            // Translated text response should show up here
-            Text(
-                modifier = Modifier
-                    .size(150.dp, 150.dp)
-                    .border(width = 2.dp, color = MaterialTheme.colors.primary)
-                    .padding(5.dp),
-                text = translatedText
-            )
+                )
+            }
+
         }
-
+        // Translate text options
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .padding(16.dp),
             horizontalArrangement = Arrangement.Center
         ) {
             // "Translate to: " prompt label
             Text(stringResource(R.string.language_selection_prompt))
-
             Spacer(Modifier.size(5.dp))
+            when (displayLanguages) {
+                is UIState.Result -> {
+                    // Creates the dropdown list of languages to select from
+                    LanguageDropDown(
+                        languages = displayLanguages.data, // TODO: Maybe grab this a different way.
+                        targetLanguageIndex = targetLanguageIndex,
+                        onTargetLanguageSelected = onTargetLanguageSelected
+                    )
+                }
+                else -> {
+                    // Placeholder text if we don't have languages for the dropdown
+                    Text(stringResource(R.string.language_selection_placeholder))
+                }
+            }
 
-            if (languages.isNullOrEmpty()) {
-                // Placeholder text if we don't have languages for the dropdown
-                Text(stringResource(R.string.language_selection_placeholder))
-            } else {
-                // Creates the dropdown list of languages to select from
-                LanguageDropDown(
-                    languages = languages,
-                    targetLanguageIndex = targetLanguageIndex,
-                    onTargetLanguageSelected = onTargetLanguageSelected
-                )
+        }
+        // Button
+        Row {
+            // Button to execute the translation
+            Button(
+                onClick = onTranslateClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.translate_button))
             }
         }
 
-        // Button to execute the translation
-        Button(onClick = onTranslateClick) {
-            Text(stringResource(R.string.translate_button))
-        }
     }
 }
 
 @Composable
 fun LanguageDropDown(
-    languages: List<String>,
+    languages: List<Language>,
     targetLanguageIndex: Int,
     onTargetLanguageSelected: (Int) -> Unit
 ) {
@@ -100,7 +150,7 @@ fun LanguageDropDown(
         // Shows currently selected language and opens dropdown menu
         Text(
             modifier = Modifier.clickable { expandLanguageList = true },
-            text = languages[targetLanguageIndex]
+            text = languages[targetLanguageIndex].name
         )
 
         // Dropdown menu to select a language to translate to
@@ -116,7 +166,7 @@ fun LanguageDropDown(
                         expandLanguageList = false
                     }
                 ) {
-                    Text(text = language)
+                    Text(text = language.name)
                 }
             }
         }

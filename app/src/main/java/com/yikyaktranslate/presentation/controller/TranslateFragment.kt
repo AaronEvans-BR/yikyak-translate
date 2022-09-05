@@ -9,14 +9,15 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
 import com.yikyaktranslate.presentation.theme.YikYakTranslateTheme
 import com.yikyaktranslate.presentation.view.TranslateView
 import com.yikyaktranslate.presentation.viewmodel.TranslateViewModel
+import com.yikyaktranslate.presentation.viewmodel.UIState
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class TranslateFragment : Fragment() {
 
-    private val translateViewModel: TranslateViewModel by viewModels()
+    private val translateViewModel: TranslateViewModel by viewModel()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -30,18 +31,18 @@ class TranslateFragment : Fragment() {
                     val inputText by translateViewModel.textToTranslate.observeAsState(
                         TextFieldValue("")
                     )
-                    val languages by translateViewModel.languagesToDisplay.observeAsState(initial = listOf())
+                    val languages by translateViewModel.displayLanguages.observeAsState(initial = UIState.Idle)
                     val targetLanguageIndex by translateViewModel.targetLanguageIndex
-
+                    val resultLanguage by translateViewModel.resultLanguage.observeAsState(initial = UIState.Idle)
                     // Create Compose view
                     TranslateView(
                         inputText = inputText,
                         onInputChange = translateViewModel::onInputTextChange,
-                        languages = languages,
+                        displayLanguages = languages,
                         targetLanguageIndex = targetLanguageIndex,
                         onTargetLanguageSelected = translateViewModel::onTargetLanguageChange,
-                        onTranslateClick = {},
-                        translatedText = ""
+                        onTranslateClick = translateViewModel::translate,
+                        translatedText = resultLanguage
                     )
                 }
             }

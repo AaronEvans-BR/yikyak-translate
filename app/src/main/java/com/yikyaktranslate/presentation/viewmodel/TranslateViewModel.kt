@@ -1,33 +1,27 @@
 package com.yikyaktranslate.presentation.viewmodel
 
 import android.app.Application
-import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.lifecycle.*
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.viewModelScope
 import com.yikyaktranslate.R
 import com.yikyaktranslate.model.Language
+import com.yikyaktranslate.service.face.ApiResult
 import com.yikyaktranslate.service.face.TranslationService
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import kotlinx.coroutines.launch
 
-class TranslateViewModel(application: Application) : AndroidViewModel(application) {
+class TranslateViewModel(application: Application, private val service: TranslationService) : AndroidViewModel(application) {
 
     // Code for the source language that we are translating from; currently hardcoded to English
     private val sourceLanguageCode: String = application.getString(R.string.source_language_code)
 
     // List of Languages that we get from the back end
-    private val languages: MutableStateFlow<List<Language>> by lazy {
-        MutableStateFlow<List<Language>>(listOf()).also {
-            loadLanguages()
-        }
-    }
-
-    // List of names of languages to display to user
-    val languagesToDisplay = languages.map { it.map { language ->  language.name } }.asLiveData()
+    private val _displayLanguages = MutableStateFlow<UIState<List<Language>>>(UIState.Idle)
+    val displayLanguages: LiveData<UIState<List<Language>>> = _displayLanguages.asLiveData()
 
     // Index within languages/languagesToDisplay that the user has selected
     val targetLanguageIndex = mutableStateOf(0)
@@ -36,27 +30,30 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
     private val _textToTranslate = MutableStateFlow(TextFieldValue(""))
     val textToTranslate = _textToTranslate.asLiveData()
 
+    private val _resultLanguage = MutableStateFlow<UIState<String>>(UIState.Idle)
+    val resultLanguage = _resultLanguage.asLiveData()
+
     /**
      * Loads the languages from our service
      */
-    private fun loadLanguages() {
-        val translationService = TranslationService.create()
-        val call = translationService.getLanguages()
-        call.enqueue(object : Callback<List<Language>> {
-            override fun onResponse(
-                call: Call<List<Language>>,
-                response: Response<List<Language>>
-            ) {
-                if (response.body() != null) {
-                    languages.value = response.body()!!
-                }
-            }
+    private suspend fun loadLanguages() {
+        _displayLanguages.value = UIState.Loading
+        _displayLanguages.value = when (val apiResult = service.fetchLanguages()) {
+            is ApiResult.Success -> UIState.Result(apiResult.data)
+            else -> UIState.Failure
+        }
+    }
 
-            override fun onFailure(call: Call<List<Language>>, t: Throwable) {
-                t.message?.let { Log.e(javaClass.name, it) }
-                languages.value = listOf()
+    fun translate() {
+        val asSuccessResult = _displayLanguages.value as? UIState.Result ?: return
+        viewModelScope.launch {
+            _resultLanguage.value = UIState.Loading
+            val apiResult = service.translate(sourceLanguageCode, asSuccessResult.data[targetLanguageIndex.value].code, _textToTranslate.value.text)
+            _resultLanguage.value = when (apiResult) {
+                is ApiResult.Success -> UIState.Result(apiResult.data.translatedText)
+                else -> UIState.Failure
             }
-        })
+        }
     }
 
     /**
@@ -77,4 +74,16 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
         targetLanguageIndex.value = newLanguageIndex
     }
 
+    init {
+        viewModelScope.launch {
+            loadLanguages()
+        }
+    }
+}
+
+sealed class UIState<out UI_DATA : Any> {
+    object Idle : UIState<Nothing>()
+    object Loading : UIState<Nothing>()
+    object Failure : UIState<Nothing>()
+    data class Result<out UI_DATA : Any>(val data: UI_DATA) : UIState<UI_DATA>()
 }

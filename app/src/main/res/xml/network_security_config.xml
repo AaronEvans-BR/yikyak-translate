@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?><!-- More info at https://developer.android.com/training/articles/security-config.html -->
+<network-security-config>
+    <base-config>
+        <trust-anchors>
+            <certificates src="system" /> <!-- Trust preinstalled CAs -->
+        </trust-anchors>
+    </base-config>
+    <!-- Using charles to help sniff out my request issues -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" /> <!-- Trust preinstalled CAs -->
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>
