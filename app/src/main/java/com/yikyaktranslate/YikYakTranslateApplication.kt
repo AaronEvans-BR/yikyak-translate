@@ -3,6 +3,7 @@ package com.yikyaktranslate
 import android.app.Application
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.yikyaktranslate.presentation.domain.TranslateLogic
 import com.yikyaktranslate.presentation.viewmodel.TranslateViewModel
 import com.yikyaktranslate.service.face.TranslationApi
 import com.yikyaktranslate.service.face.TranslationService
@@ -58,7 +59,10 @@ class YikYakTranslateApplication : Application() {
                     TranslationService(get())
                 }
                 single {
-                    TranslateViewModel(get(), get())
+                    TranslateViewModel(get(), get(), get())
+                }
+                single {
+                    TranslateLogic()
                 }
             }))
         }

@@ -3,28 +3,30 @@ package com.yikyaktranslate.presentation.viewmodel
 import android.app.Application
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.intl.Locale
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import com.yikyaktranslate.R
 import com.yikyaktranslate.model.Language
+import com.yikyaktranslate.presentation.domain.TranslateLogic
 import com.yikyaktranslate.service.face.ApiResult
 import com.yikyaktranslate.service.face.TranslationService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
-class TranslateViewModel(application: Application, private val service: TranslationService) : AndroidViewModel(application) {
+class TranslateViewModel(
+    application: Application,
+    private val service: TranslationService,
+    private val translateLogic: TranslateLogic
+) : AndroidViewModel(application) {
 
-    // Code for the source language that we are translating from; currently hardcoded to English
-    private val sourceLanguageCode: String = application.getString(R.string.source_language_code)
+    // Code for the source language that we are translating from; currently mapped to the device locale/language
+    private val sourceLanguageCode: String get() = Locale.current.language
 
     // List of Languages that we get from the back end
     private val _displayLanguages = MutableStateFlow<UIState<List<Language>>>(UIState.Idle)
     val displayLanguages: LiveData<UIState<List<Language>>> = _displayLanguages.asLiveData()
-
-    // Index within languages/languagesToDisplay that the user has selected
-    val targetLanguageIndex = mutableStateOf(0)
 
     // Text that the user has input to be translated
     private val _textToTranslate = MutableStateFlow(TextFieldValue(""))
@@ -33,26 +35,47 @@ class TranslateViewModel(application: Application, private val service: Translat
     private val _resultLanguage = MutableStateFlow<UIState<String>>(UIState.Idle)
     val resultLanguage = _resultLanguage.asLiveData()
 
+    // Index within languages/languagesToDisplay that the user has selected
+    val toTargetLanguageIndex = mutableStateOf(0)
+
+    val fromTargetLanguageIndex = mutableStateOf(0)
+
     /**
      * Loads the languages from our service
      */
     private suspend fun loadLanguages() {
         _displayLanguages.value = UIState.Loading
         _displayLanguages.value = when (val apiResult = service.fetchLanguages()) {
-            is ApiResult.Success -> UIState.Result(apiResult.data)
+            is ApiResult.Success -> {
+                toTargetLanguageIndex.value = translateLogic.getDefaultToLanguageIndex(sourceLanguageCode, apiResult.data)
+                fromTargetLanguageIndex.value = translateLogic.getDefaultFromLanguageIndex(sourceLanguageCode, apiResult.data)
+                UIState.Result(apiResult.data)
+            }
             else -> UIState.Failure
         }
     }
 
     fun translate() {
-        val asSuccessResult = _displayLanguages.value as? UIState.Result ?: return
-        viewModelScope.launch {
+        val source = translateLogic.getLangCodeForIndex(fromTargetLanguageIndex.value, _displayLanguages.value)
+        val target = translateLogic.getLangCodeForIndex(toTargetLanguageIndex.value, _displayLanguages.value)
+        val text = _textToTranslate.value.text
+
+        if (translateLogic.areParamsValid(text, source, target)) {
+            // Valid parameter state
             _resultLanguage.value = UIState.Loading
-            val apiResult = service.translate(sourceLanguageCode, asSuccessResult.data[targetLanguageIndex.value].code, _textToTranslate.value.text)
-            _resultLanguage.value = when (apiResult) {
-                is ApiResult.Success -> UIState.Result(apiResult.data.translatedText)
-                else -> UIState.Failure
+            viewModelScope.launch {
+                _resultLanguage.value =
+                    when (val apiResult = service.translate(
+                        text = _textToTranslate.value.text,
+                        sourceLanguage = sourceLanguageCode,
+                        targetLanguage = target,
+                    )) {
+                        is ApiResult.Success -> UIState.Result(apiResult.data.translatedText)
+                        else -> UIState.Failure
+                    }
             }
+        } else {
+            // Invalid Parameter state
         }
     }
 
@@ -71,7 +94,11 @@ class TranslateViewModel(application: Application, private val service: Translat
      * @param newLanguageIndex Represents the index for the chosen language in the list of languages
      */
     fun onTargetLanguageChange(newLanguageIndex: Int) {
-        targetLanguageIndex.value = newLanguageIndex
+        toTargetLanguageIndex.value = newLanguageIndex
+    }
+
+    fun onFromTargetLanguageChange(newLanguageIndex: Int) {
+        fromTargetLanguageIndex.value = newLanguageIndex
     }
 
     init {

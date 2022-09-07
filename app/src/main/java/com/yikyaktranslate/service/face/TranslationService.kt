@@ -58,6 +58,7 @@ sealed class ApiResult<out SUCCESS_TYPE : Any?> {
      * We could get a lot more specific with these errors
      */
     sealed class Failure : ApiResult<Nothing>() {
+
         // 429 error "Too many requests"
         object ExcessiveRequests : Failure()
 

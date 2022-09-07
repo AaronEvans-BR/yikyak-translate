@@ -12,7 +12,8 @@ You have been asked to create a translation app! You’ve been given a version t
 
 Your tasks are as follows:
 
-- Implement the translation functionality. The app currently uses Retrofit2 to make API calls, and the UI components are already in place in `TranslateView.kt`. This should involve:
+- Implement the translation functionality. 
+- The app currently uses Retrofit2 to make API calls, and the UI components are already in place in `TranslateView.kt`. This should involve:
     - Creating a POST request to get the translation [https://libretranslate.com/docs/#/translate/post_translate](https://libretranslate.com/docs/#/translate/post_translate)
     - Connecting the service to the UI to show the result
 - Update the API calls to be asynchronous, using Kotlin coroutines and flows

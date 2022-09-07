@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.material.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.platform.ComposeView
@@ -27,23 +28,28 @@ class TranslateFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 YikYakTranslateTheme {
-                    // Observe fields from view model
-                    val inputText by translateViewModel.textToTranslate.observeAsState(
-                        TextFieldValue("")
-                    )
-                    val languages by translateViewModel.displayLanguages.observeAsState(initial = UIState.Idle)
-                    val targetLanguageIndex by translateViewModel.targetLanguageIndex
-                    val resultLanguage by translateViewModel.resultLanguage.observeAsState(initial = UIState.Idle)
-                    // Create Compose view
-                    TranslateView(
-                        inputText = inputText,
-                        onInputChange = translateViewModel::onInputTextChange,
-                        displayLanguages = languages,
-                        targetLanguageIndex = targetLanguageIndex,
-                        onTargetLanguageSelected = translateViewModel::onTargetLanguageChange,
-                        onTranslateClick = translateViewModel::translate,
-                        translatedText = resultLanguage
-                    )
+                    Surface {
+                        // Observe fields from view model
+                        val inputText by translateViewModel.textToTranslate.observeAsState(
+                            TextFieldValue("")
+                        )
+                        val languages by translateViewModel.displayLanguages.observeAsState(initial = UIState.Idle)
+                        val targetLanguageIndex by translateViewModel.toTargetLanguageIndex
+                        val fromTargetLanguageIndex by translateViewModel.fromTargetLanguageIndex
+                        val resultLanguage by translateViewModel.resultLanguage.observeAsState(initial = UIState.Idle)
+                        // Create Compose view
+                        TranslateView(
+                            inputText = inputText,
+                            onInputChange = translateViewModel::onInputTextChange,
+                            displayLanguages = languages,
+                            toTargetLanguageIndex = targetLanguageIndex,
+                            fromTargetLanguageIndex = fromTargetLanguageIndex,
+                            toTargetLanguageSelected = translateViewModel::onTargetLanguageChange,
+                            fromTargetLanguageSelected = translateViewModel::onFromTargetLanguageChange,
+                            onTranslateClick = translateViewModel::translate,
+                            translatedText = resultLanguage
+                        )
+                    }
                 }
             }
         }
