@@ -67,7 +67,7 @@ class TranslateViewModel(
                 _resultLanguage.value =
                     when (val apiResult = service.translate(
                         text = _textToTranslate.value.text,
-                        sourceLanguage = sourceLanguageCode,
+                        sourceLanguage = source,
                         targetLanguage = target,
                     )) {
                         is ApiResult.Success -> UIState.Result(apiResult.data.translatedText)
