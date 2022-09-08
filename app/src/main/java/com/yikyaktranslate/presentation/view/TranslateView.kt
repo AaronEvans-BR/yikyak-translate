@@ -61,15 +61,22 @@ fun TranslateView(
                 .height(IntrinsicSize.Max)
         ) {
             when (translatedText) {
-                is UIState.Result -> Text(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
-                        .verticalScroll(scrollState)
-                        .border(width = 2.dp, color = MaterialTheme.colors.primary)
-                        .padding(5.dp),
-                    text = translatedText.data
-                )
+                is UIState.Result ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight()
+                            .border(width = 2.dp, color = MaterialTheme.colors.primary)
+                    ) {
+                        Text(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight()
+                                .verticalScroll(scrollState)
+                                .padding(5.dp),
+                            text = translatedText.data
+                        )
+                    }
                 is UIState.Loading -> {
                     Box(
                         modifier = Modifier
@@ -87,15 +94,14 @@ fun TranslateView(
                 is UIState.Idle -> {
                     // Draw nothing!
                 }
-                else -> Text(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
-                        .verticalScroll(scrollState)
-                        .border(width = 2.dp, color = MaterialTheme.colors.primary)
-                        .padding(5.dp),
-                    text = "Error"
-                )
+                else ->
+                    Text(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight()
+                            .padding(5.dp),
+                        text = "Error"
+                    )
             }
 
         }
