@@ -30,6 +30,10 @@ class TranslationService(private val api: TranslationApi) {
 
 
     private suspend fun <T> catchExceptionFromCall(call: suspend () -> ApiResult<T>): ApiResult<T> {
+        /**
+         * This is a quick and dirty way to handle these exceptions.
+         * We could instead user an interceptor with retrofit. I opted for this solution as it's simple and easy to implement. 
+         */
         return try {
             call()
         } catch (e: Exception) {
