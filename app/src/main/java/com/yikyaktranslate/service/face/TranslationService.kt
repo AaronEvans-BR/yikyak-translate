@@ -3,23 +3,43 @@ package com.yikyaktranslate.service.face
 import com.yikyaktranslate.model.Language
 import okhttp3.MultipartBody
 import retrofit2.Response
+import timber.log.Timber
+import java.net.SocketTimeoutException
 
 class TranslationService(private val api: TranslationApi) {
 
     suspend fun fetchLanguages(): ApiResult<List<Language>> {
-        return api.getLanguages().toApiResult()
+        return catchExceptionFromCall { api.getLanguages().toApiResult() }
     }
 
     suspend fun translate(sourceLanguage: String, targetLanguage: String, text: String): ApiResult<Translation> {
-        return api.translateString(
-            MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("source", sourceLanguage)
-                .addFormDataPart("target", targetLanguage)
-                .addFormDataPart("q", text)
-                .addFormDataPart("format", "text")
-                .build()
-        ).toApiResult()
+
+        return catchExceptionFromCall {
+            api.translateString(
+                MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("source", sourceLanguage)
+                    .addFormDataPart("target", targetLanguage)
+                    .addFormDataPart("q", text)
+                    .addFormDataPart("format", "text")
+                    .build()
+            ).toApiResult()
+        }
+
+    }
+
+
+    private suspend fun <T> catchExceptionFromCall(call: suspend () -> ApiResult<T>): ApiResult<T> {
+        return try {
+            call()
+        } catch (e: Exception) {
+            Timber.d("Exception caught while making API Call")
+            when (e) {
+                is SocketTimeoutException -> ApiResult.Failure.TimeoutException
+                else -> ApiResult.Failure.General(0, e.localizedMessage)
+            }
+        }
+
     }
 }
 
@@ -64,6 +84,8 @@ sealed class ApiResult<out SUCCESS_TYPE : Any?> {
 
         // 404 error "Example of additional error catching"
         object NotFound : Failure()
+
+        object TimeoutException : Failure()
 
         // General error "Catch all"
         data class General(val errorCode: Int, val message: String?) : Failure()
